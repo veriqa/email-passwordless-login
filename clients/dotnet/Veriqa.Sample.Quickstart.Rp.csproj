@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Self-contained on purpose: the same project builds inside veriqa/core, under its root
+       Directory.Build.props, and alone in a channel sample repository, where no such file exists.
+       Everything the build needs is stated here. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Veriqa.Sample.Quickstart.Rp</RootNamespace>
+    <AssemblyName>Veriqa.Sample.Quickstart.Rp</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- A plain OpenID Connect relying party: no Veriqa package, Veriqa lives on the issuer side. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.9" />
+  </ItemGroup>
+
+</Project>

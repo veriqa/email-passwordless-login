@@ -1,0 +1,59 @@
+# Veriqa with the Email channel - a local sign-in stand for the clients/dotnet/ client of this repository.
+#
+# A local evaluation setup, not a production one: the Development environment keeps the OpenIddict
+# store in memory and signs tokens with development certificates, so every restart forgets the
+# registered sessions. Production setup: https://veriqa.app/docs/quickstart/self-hosted
+#
+# Out of the box the letters go to Mailpit, a local mail catcher with a web inbox at
+# http://localhost:8025 - nothing leaves this machine. Set the SMTP_* variables in .env to send
+# through a real mail server instead.
+#
+# Before `docker compose up -d`: fill .env from .env.example and export the HTTPS certificate into
+# certs/ (README, "Run it").
+
+name: email-passwordless-login
+
+services:
+  veriqa:
+    image: registry.gitlab.com/veriqa/veriqa:0.6.1
+    restart: unless-stopped
+    depends_on:
+      - mailpit
+    ports:
+      - "8443:8443"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # HTTPS for the browser and the client; plain HTTP stays inside the container for the image's
+      # own health check.
+      ASPNETCORE_URLS: "https://+:8443;http://+:8080"
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/localhost.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: "${CERT_PASSWORD:?set CERT_PASSWORD in .env - see .env.example}"
+
+      # The issuer must be https, and the browser and the client must see the same address.
+      Veriqa__OpenIddict__Server__Issuer: "https://localhost:8443"
+
+      # The client of this repository (clients/dotnet/): a public client, so Veriqa requires PKCE from it.
+      Veriqa__OpenIddict__Clients__0__ClientId: rp
+      Veriqa__OpenIddict__Clients__0__DisplayName: "Quickstart client"
+      Veriqa__OpenIddict__Clients__0__AllowedRedirectUris__0: "https://localhost:7020/signin-oidc"
+      Veriqa__OpenIddict__Clients__0__AllowedScopes__0: openid
+      Veriqa__OpenIddict__Clients__0__AllowedScopes__1: profile
+
+      # The one channel of this stand: the magic link. The links in the letter point at this address.
+      Veriqa__Channels__Email__Enabled: "true"
+      Veriqa__Channels__Email__PublicBaseUrl: "https://localhost:8443"
+      Veriqa__Channels__Email__Outbound__FromAddress: "${EMAIL_FROM_ADDRESS:-login@example.com}"
+      Veriqa__Channels__Email__Outbound__Smtp__Host: "${SMTP_HOST:-mailpit}"
+      Veriqa__Channels__Email__Outbound__Smtp__Port: "${SMTP_PORT:-1025}"
+      Veriqa__Channels__Email__Outbound__Smtp__UseSsl: "${SMTP_USE_SSL:-false}"
+      Veriqa__Channels__Email__Outbound__Smtp__Username: "${SMTP_USERNAME:-}"
+      Veriqa__Channels__Email__Outbound__Smtp__Password: "${SMTP_PASSWORD:-}"
+    volumes:
+      - ./certs:/https:ro
+
+  mailpit:
+    image: axllent/mailpit:v1.31
+    restart: unless-stopped
+    ports:
+      # The web inbox, on this machine only.
+      - "127.0.0.1:8025:8025"
