@@ -15,7 +15,7 @@ name: email-passwordless-login
 
 services:
   veriqa:
-    image: registry.gitlab.com/veriqa/veriqa:0.6.1
+    image: registry.gitlab.com/veriqa/veriqa:0.7.0
     restart: unless-stopped
     depends_on:
       - mailpit

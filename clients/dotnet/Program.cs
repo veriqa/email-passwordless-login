@@ -48,6 +48,24 @@ builder.Services
         options.MapInboundClaims = false;
         options.GetClaimsFromUserInfoEndpoint = true;
 
+        // A user who presses "Cancel sign-in" on the Veriqa page comes back with error=access_denied.
+        // With no path set here the refusal would go to OnRemoteFailure below, like any other failed
+        // return.
+        options.AccessDeniedPath = "/signin-cancelled";
+
+        // Every other failed return - Veriqa answering error=server_error, say, because the channel did
+        // not deliver the confirmation - raises OnRemoteFailure; with no handler for it the return ends
+        // in an HTTP 500. The user is taken to a page that offers to start over. The error text is
+        // deliberately not shown to the user: it is written to the log instead.
+        options.Events.OnRemoteFailure = context =>
+        {
+            context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>()
+                .LogWarning(context.Failure, "The sign-in return carried an error.");
+            context.HandleResponse();
+            context.Response.Redirect("/signin-failed");
+            return Task.CompletedTask;
+        };
+
         if (!string.IsNullOrWhiteSpace(channel))
         {
             options.Events.OnRedirectToIdentityProvider = context =>
@@ -71,6 +89,15 @@ app.MapGet("/", (ClaimsPrincipal user) =>
     user.Identity?.IsAuthenticated is true
         ? Results.Content(ClaimsPage(user), "text/html; charset=utf-8")
         : Results.Challenge());
+
+// Where the handler sends a user who did not go through with the sign-in (AccessDeniedPath above).
+// It is a route of its own because "/" challenges an anonymous visitor: sent there, the user would be
+// put straight back on the sign-in page they have just left.
+app.MapGet("/signin-cancelled", () => Results.Text("Sign-in was cancelled. Open / to sign in again."));
+
+// Where OnRemoteFailure above sends a user whose sign-in ended in an error. Like the page before it,
+// it is anonymous and starts nothing by itself: redirected to "/", a failure that repeats would loop.
+app.MapGet("/signin-failed", () => Results.Text("Sign-in could not be completed. Open / to sign in again."));
 
 // Drops this application's cookie only, so the flow can be replayed.
 app.MapGet("/signout", () =>

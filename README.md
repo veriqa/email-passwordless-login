@@ -13,11 +13,11 @@ Out of the box nothing leaves your machine: the letters go to [Mailpit](https://
 a local mail catcher with a web inbox, so the stand works without any mail account. Point it at a
 real SMTP server when you want real mail.
 
-The provider is [Veriqa](https://veriqa.app): an OpenID Connect server built on OpenIddict that
-confirms sign-ins in messaging apps — Telegram, WhatsApp, other channels or Email. Email is the
-channel for users without a messenger. The client knows nothing about Veriqa: it is the stock
-ASP.NET Core OpenID Connect handler (Authorization Code + PKCE), so the same setup works for any
-stack with an OIDC library.
+The provider is [Veriqa](https://veriqa.app): an open-source OpenID Connect provider built on
+OpenIddict that confirms sign-ins in messaging apps — Telegram, WhatsApp, Instagram, Messenger,
+WeChat, Viber, other channels or Email. Email is the channel for users without a messaging app. The
+client knows nothing about Veriqa: it is the stock ASP.NET Core OpenID Connect handler
+(Authorization Code + PKCE), so the same setup works for any stack with an OIDC library.
 
 Each folder next to `clients/` is one way to connect Email, with a stand of its own; they share the
 client app in `clients/dotnet/`. `built-in/` uses the Email channel built into Veriqa.
