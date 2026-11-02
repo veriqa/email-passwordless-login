@@ -1,0 +1,12 @@
+{
+    "name": "veriqa/quickstart-client",
+    "description": "The client of the Veriqa channel quickstarts on PHP.",
+    "license": "MIT",
+    "type": "project",
+    "require": {
+        "php": ">=8.2",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "jumbojett/openid-connect-php": "1.0.2"
+    }
+}

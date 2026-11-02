@@ -1,4 +1,4 @@
-# Veriqa with the Email channel - a local sign-in stand for the clients/dotnet/ client of this repository.
+# Veriqa with the Email channel - a local sign-in stand for the clients/ of this repository.
 #
 # A local evaluation setup, not a production one: the Development environment keeps the OpenIddict
 # store in memory and signs tokens with development certificates, so every restart forgets the
@@ -15,7 +15,7 @@ name: email-passwordless-login
 
 services:
   veriqa:
-    image: registry.gitlab.com/veriqa/veriqa:0.7.0
+    image: registry.gitlab.com/veriqa/veriqa:0.7.1
     restart: unless-stopped
     depends_on:
       - mailpit
@@ -32,16 +32,19 @@ services:
       # The issuer must be https, and the browser and the client must see the same address.
       Veriqa__OpenIddict__Server__Issuer: "https://localhost:8443"
 
-      # The client of this repository (clients/dotnet/): a public client, so Veriqa requires PKCE from it.
+      # The clients of this repository (clients/): a public client, so Veriqa requires PKCE from them. The
+      # ASP.NET Core one serves HTTPS, the others plain HTTP - on localhost only the provider needs TLS.
       Veriqa__OpenIddict__Clients__0__ClientId: rp
       Veriqa__OpenIddict__Clients__0__DisplayName: "Quickstart client"
       Veriqa__OpenIddict__Clients__0__AllowedRedirectUris__0: "https://localhost:7020/signin-oidc"
+      Veriqa__OpenIddict__Clients__0__AllowedRedirectUris__1: "http://localhost:7020/signin-oidc"
       Veriqa__OpenIddict__Clients__0__AllowedScopes__0: openid
       Veriqa__OpenIddict__Clients__0__AllowedScopes__1: profile
 
       # The one channel of this stand: the magic link. The links in the letter point at this address.
       Veriqa__Channels__Email__Enabled: "true"
       Veriqa__Channels__Email__PublicBaseUrl: "https://localhost:8443"
+      Veriqa__Channels__Email__PullMethods__0: "${EMAIL_PULL_METHOD:-MagicLink}"
       Veriqa__Channels__Email__Outbound__FromAddress: "${EMAIL_FROM_ADDRESS:-login@example.com}"
       Veriqa__Channels__Email__Outbound__Smtp__Host: "${SMTP_HOST:-mailpit}"
       Veriqa__Channels__Email__Outbound__Smtp__Port: "${SMTP_PORT:-1025}"
@@ -57,3 +60,22 @@ services:
     ports:
       # The web inbox, on this machine only.
       - "127.0.0.1:8025:8025"
+
+  # Creates the HTTPS certificate for the Python, Node.js, Go and PHP clients; run it once with
+  # `docker compose run --rm certificate`. The ASP.NET Core client uses the .NET development
+  # certificate instead (README, "Run it").
+  certificate:
+    image: alpine/openssl:3.5.9
+    profiles: [setup]
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        openssl req -x509 -newkey rsa:2048 -nodes -days 365 -subj /CN=localhost
+        -addext subjectAltName=DNS:localhost -keyout /tmp/localhost.key -out /certs/localhost.crt
+        && openssl pkcs12 -export -inkey /tmp/localhost.key -in /certs/localhost.crt
+        -out /certs/localhost.pfx -passout env:CERT_PASSWORD
+        && chmod 644 /certs/localhost.crt /certs/localhost.pfx
+    environment:
+      CERT_PASSWORD: "${CERT_PASSWORD:?set CERT_PASSWORD in .env - see .env.example}"
+    volumes:
+      - ./certs:/certs
